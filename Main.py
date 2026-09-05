@@ -20,4 +20,11 @@ def get_user(session : Session = Depends(get_session)):
         
     return user
 
-
+@app.post("/users", response_model= UserResponse)
+def create_user(data:UserRequest, session:Session = Depends(get_session)):
+    with session.begin():
+        user = User(name=data.name, age=data.age)
+        session.add(user)
+        session.flush()
+        session.refresh(user)
+    return user
