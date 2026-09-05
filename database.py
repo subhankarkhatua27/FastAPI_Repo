@@ -1,6 +1,6 @@
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import mapped_column
-from session import engine
+
 
 from sqlalchemy.orm import Mapped
 class Base(DeclarativeBase):
@@ -12,4 +12,4 @@ class User(Base):
     name : Mapped[str] 
     age : Mapped[int] 
 
-Base.metadata.create_all(engine)    
+  

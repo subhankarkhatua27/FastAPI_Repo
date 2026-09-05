@@ -2,16 +2,16 @@
 
 
 from fastapi import  FastAPI,Depends
-from database import User
+from database import  User
 from session import get_session
 from model import UserRequest, UserResponse
 from sqlalchemy.orm import Session 
 
 
 
+app=FastAPI()
 
 
-app = FastAPI()
 @app.get("/users", response_model= UserResponse)
 def get_user(session : Session = Depends(get_session)):
     

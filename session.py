@@ -1,13 +1,25 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import  sessionmaker
 import psycopg
 
+from database import Base
+from sqlalchemy import URL
 PASSWORD = "subha7363KH@"
-engine =create_engine(f"postgresql+psycopg://postgres:{PASSWORD}@localhost/fastapi_app")  
+database_url = URL.create(
+    "postgresql+psycopg",
+    username="postgres",
+    password=PASSWORD,
+    host="localhost",
+    database="fastapi_app",
+)
+
+engine = create_engine(database_url,pool_size = 5)
+
+
 
 SessionLocal = sessionmaker(
     bind = engine,
-    pool_size = 5 )
+    autocommit=False,)
     
 
 def get_session():
@@ -15,4 +27,8 @@ def get_session():
         yield session
         
         
-        
+
+with engine.begin() as conn:
+    Base.metadata.create_all(conn)
+    
+            
