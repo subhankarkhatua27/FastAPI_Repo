@@ -12,4 +12,7 @@ class UserResponse(BaseModel):
     id : int
     model_config = {"from_attributes": True}
 
- 
+class PartialUserUpdate(BaseModel):
+    name: str|None = None
+    age : int|None = None
+    model_config = {"from_attributes": True}
