@@ -1,16 +1,49 @@
 
 
 
+from sqlalchemy import select
+
 from fastapi import  FastAPI,Depends, HTTPException
-from database import  User
+from database import  User, RegisterDetails
 from session import get_session
-from model import PartialUserUpdate, UserRequest, UserResponse
+from model import PartialUserUpdate, UserRequest, UserResponse,RegisterRequest, RegisterResponse
 from sqlalchemy.orm import Session 
 from sqlalchemy.exc import IntegrityError
 from fastapi import Request
 from fastapi.responses import JSONResponse
+from reg_login import hash_generator, verify_password
+
 
 app=FastAPI()
+@app.post("/register", response_model=RegisterResponse)
+def register_user(data:RegisterRequest ,session:Session=Depends(get_session)):
+    with session.begin():
+        existing_user=session.scalar(select(RegisterDetails).where (RegisterDetails.email == data.email))
+        
+        if existing_user:
+            raise HTTPException(
+                status_code = 401,
+                detail = "Email already registered",
+                
+            )
+
+        registered_user = RegisterDetails(
+            user_id = data.user_id,
+            password_hash = hash_generator(data.password),
+            email = data.email
+                
+        )
+         
+        session.add(registered_user)
+        session.flush()
+        session.refresh(registered_user)
+        
+    return registered_user
+
+
+
+
+
 
 @app.exception_handler(IntegrityError)
 def handle_integrity_error(request:Request, exc:IntegrityError):

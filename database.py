@@ -1,9 +1,10 @@
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import mapped_column
+from sqlalchemy.orm import mapped_column,Mapped
 
 from enum import Enum
 from sqlalchemy import Enum as saenum
+
 
 class ProductCategory(str,Enum):
     CLOTHES = "clothing"
@@ -32,3 +33,11 @@ class Product(Base):
                                         saenum(ProductCategory),
                                         nullable = False
                                     )
+    
+class RegisterDetails(Base):
+    __tablename__ = "register_details"
+    
+    id : Mapped[int] = mapped_column(primary_key = True)
+    user_id : Mapped[int] = mapped_column(ForeignKey("users.id"))
+    password_hash : Mapped[str] 
+    email : Mapped[str] = mapped_column( unique = True , nullable = False)

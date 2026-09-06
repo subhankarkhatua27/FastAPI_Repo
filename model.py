@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class UserRequest (BaseModel):
@@ -15,4 +15,14 @@ class UserResponse(BaseModel):
 class PartialUserUpdate(BaseModel):
     name: str|None = None
     age : int|None = None
+    model_config = {"from_attributes": True}
+    
+class RegisterRequest(BaseModel):
+    user_id:int
+    password:str
+    email:EmailStr
+    
+class RegisterResponse(BaseModel):
+    user_id:int
+    email:EmailStr
     model_config = {"from_attributes": True}
