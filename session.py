@@ -4,7 +4,11 @@ import psycopg
 
 from database import Base
 from sqlalchemy import URL
-PASSWORD = "subha7363KH@"
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+PASSWORD = os.getenv("PASSWORD")
 database_url = URL.create(
     "postgresql+psycopg",
     username="postgres",

@@ -6,13 +6,19 @@ from sqlalchemy import select
 from fastapi import  FastAPI,Depends, HTTPException
 from database import  User, RegisterDetails
 from session import get_session
-from model import PartialUserUpdate, UserRequest, UserResponse,RegisterRequest, RegisterResponse
+from model import PartialUserUpdate, UserRequest, UserResponse,RegisterRequest, RegisterResponse, LoginRequest
 from sqlalchemy.orm import Session 
 from sqlalchemy.exc import IntegrityError
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from reg_login import hash_generator, verify_password
+from reg_login import hash_generator, verify_password, generate_jwt_token
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
+if SECRET_KEY is None :
+    raise RuntimeError(" can't find SECRET_KEY in environment variables. Please set it in .env file")
 
 app=FastAPI()
 @app.post("/register", response_model=RegisterResponse)
@@ -41,7 +47,22 @@ def register_user(data:RegisterRequest ,session:Session=Depends(get_session)):
     return registered_user
 
 
-
+@app.post("/login")
+def login_user(data:LoginRequest, session:Session=Depends(get_session)):
+    with session.begin():
+        user = session.scalar(select(RegisterDetails).where(RegisterDetails.email == data.email))
+        
+        if not user or not verify_password(data.password, user.password_hash):
+            raise HTTPException(
+                status_code = 401,
+                detail = "Invalid email or password"
+            )
+        
+    access_token = generate_jwt_token(user.user_id, secret_key=SECRET_KEY )
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
 
 
 

@@ -26,3 +26,7 @@ class RegisterResponse(BaseModel):
     user_id:int
     email:EmailStr
     model_config = {"from_attributes": True}
+
+class LoginRequest(BaseModel):
+    email:EmailStr
+    password:str
