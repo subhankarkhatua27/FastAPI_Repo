@@ -9,11 +9,11 @@ def hash_generator(password: str):
 def verify_password(password: str, hashed_password: str):
     return password_hash.verify(password, hashed_password)
 
-def generate_jwt_token(user_id: int, secret_key: str|None, algorithm: str = "HS256"):
+def generate_jwt_token(user_id: int, secret_key: str|None, algorithm: str | None):
     payload = {
         "sub": user_id,
         "exp": datetime.now()+ timedelta(minutes=30)
         
     }
     
-    return jwt.encode(payload, secret_key, algorithm=algorithm)
+    return jwt.encode(payload, secret_key, algorithm)
