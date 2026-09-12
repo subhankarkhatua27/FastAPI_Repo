@@ -125,6 +125,9 @@ def update_user(user_id:int , data:PartialUserUpdate, session:Session = Depends(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
+        if not UserAuthPolicy.can_update_user_data(current_user, user):
+            raise HTTPException(status_code=403, detail="You do not have permission to update this user")
+        
         update_data = data.model_dump(exclude_unset = True)
         for key, value in update_data.items():
             setattr(user, key, value)
