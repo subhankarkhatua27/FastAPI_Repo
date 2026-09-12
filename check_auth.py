@@ -27,6 +27,7 @@ oauth2_schema = OAuth2PasswordBearer(
     tokenUrl="/login"
 )
 
+
 def get_current_user(session:Session = Depends(get_session),
                      token:str = Depends(oauth2_schema)):
     try:
@@ -40,6 +41,45 @@ def get_current_user(session:Session = Depends(get_session),
             raise HTTPException(
                 status_code=401,
                 detail="Could not validate credentials"
+            )
+        if payload.get("type") != "access":
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid token type"
+            )
+    except (jwt.InvalidTokenError, jwt.ExpiredSignatureError):
+        raise HTTPException(
+            status_code=401,
+            detail="Could not validate credentials"
+        )
+    
+    user = session.get(RegisterDetails, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Could not validate credentials"
+        )
+    return user
+
+
+def get_current_user_for_refresh(session:Session = Depends(get_session),
+                     token:str = Depends(oauth2_schema)):
+    try:
+        payload = jwt.decode(
+            token,
+            SECRET_KEY, 
+            algorithms = [ALGORITHM]
+        )
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(
+                status_code=401,
+                detail="Could not validate credentials"
+            )
+        if payload.get("type") != "refresh":
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid token type"
             )
     except (jwt.InvalidTokenError, jwt.ExpiredSignatureError):
         raise HTTPException(

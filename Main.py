@@ -6,13 +6,13 @@ from sqlalchemy import select
 from fastapi import  FastAPI,Depends, HTTPException
 from database import  User, RegisterDetails
 from session import get_session
-from check_auth import get_current_user
-from model import PartialUserUpdate, UserRequest, UserResponse,RegisterRequest, RegisterResponse, LoginRequest
+from check_auth import get_current_user, get_current_user_for_refresh 
+from model import PartialUserUpdate, UserRequest, UserResponse,RegisterRequest, RegisterResponse, LoginRequest, RefreshTokenRequest
 from sqlalchemy.orm import Session 
 from sqlalchemy.exc import IntegrityError
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from reg_login import hash_generator, verify_password, generate_jwt_token
+from reg_login import generate_jwt_access_token, generate_jwt_refresh_token, hash_generator, verify_password 
 import os
 from dotenv import load_dotenv
 
@@ -20,6 +20,10 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 if SECRET_KEY is None :
     raise RuntimeError(" can't find SECRET_KEY in environment variables. Please set it in .env file")
+
+SECRET_REFRESH_KEY = os.getenv("SECRET_REFRESH_KEY")
+if SECRET_REFRESH_KEY is None :
+    raise RuntimeError(" can't find SECRET_REFRESH_KEY in environment variables. Please set it in .env file")
 
 ALGORITHM = os.getenv("ALGORITHM")
 if ALGORITHM is None :
@@ -63,11 +67,23 @@ def login_user(data:LoginRequest, session:Session=Depends(get_session)):
                 detail = "Invalid email or password"
             )
         
-    access_token = generate_jwt_token(user.user_id, secret_key=SECRET_KEY , algorithm= ALGORITHM)
+    access_token = generate_jwt_access_token(user.user_id, secret_key=SECRET_KEY , algorithm= ALGORITHM)
+    refresh_token = generate_jwt_refresh_token(user.user_id, secret_key=SECRET_REFRESH_KEY , algorithm= ALGORITHM)
+        
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer"
     }
+    
+@app.post("/refresh")
+def refresh_token_endpoint( data:RefreshTokenRequest, user : RegisterDetails = Depends(get_current_user_for_refresh)):
+    new_access_token = generate_jwt_access_token(user.user_id, secret_key=SECRET_KEY , algorithm= ALGORITHM)
+    return {
+        "access_token": new_access_token,
+        "token_type": "bearer"
+    }
+        
 
 
 
