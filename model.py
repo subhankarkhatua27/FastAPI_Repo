@@ -4,6 +4,7 @@ from pydantic import BaseModel, EmailStr
 class UserRequest (BaseModel):
     name: str|None = None
     age : int
+    
 
 class UserResponse(BaseModel):
     
@@ -32,4 +33,4 @@ class LoginRequest(BaseModel):
     password:str
     
 class RefreshTokenRequest(BaseModel):
-    refresh_token:str
+    refresh_token:str  

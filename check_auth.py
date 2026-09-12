@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends,HTTPException
 import jwt
 #from Main import SECRET_KEY,ALGORITHM    // it can create circular import risk.
-from MyApp.database import RegisterDetails
+from database import RegisterDetails
 from session import get_session
 import os
 from dotenv import load_dotenv

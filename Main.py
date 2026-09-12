@@ -2,9 +2,10 @@
 
 
 from sqlalchemy import select
+from Auth_Policy import UserAuthPolicy
 
 from fastapi import  FastAPI,Depends, HTTPException
-from database import  User, RegisterDetails
+from database import  User, RegisterDetails,User_Post
 from session import get_session
 from check_auth import get_current_user, get_current_user_for_refresh 
 from model import PartialUserUpdate, UserRequest, UserResponse,RegisterRequest, RegisterResponse, LoginRequest, RefreshTokenRequest
@@ -43,11 +44,12 @@ def register_user(data:RegisterRequest ,session:Session=Depends(get_session)):
             )
 
         registered_user = RegisterDetails(
-            user_id = data.user_id,
+            id = data.user_id,
             password_hash = hash_generator(data.password),
             email = data.email
                 
         )
+        
          
         session.add(registered_user)
         session.flush()
@@ -67,8 +69,8 @@ def login_user(data:LoginRequest, session:Session=Depends(get_session)):
                 detail = "Invalid email or password"
             )
         
-    access_token = generate_jwt_access_token(user.user_id, secret_key=SECRET_KEY , algorithm= ALGORITHM)
-    refresh_token = generate_jwt_refresh_token(user.user_id, secret_key=SECRET_REFRESH_KEY , algorithm= ALGORITHM)
+    access_token = generate_jwt_access_token(user.id, secret_key=SECRET_KEY , algorithm= ALGORITHM)
+    refresh_token = generate_jwt_refresh_token(user.id, secret_key=SECRET_REFRESH_KEY , algorithm= ALGORITHM)
         
     return {
         "access_token": access_token,
@@ -78,7 +80,7 @@ def login_user(data:LoginRequest, session:Session=Depends(get_session)):
     
 @app.post("/refresh")
 def refresh_token_endpoint( data:RefreshTokenRequest, user : RegisterDetails = Depends(get_current_user_for_refresh)):
-    new_access_token = generate_jwt_access_token(user.user_id, secret_key=SECRET_KEY , algorithm= ALGORITHM)
+    new_access_token = generate_jwt_access_token(user.  id, secret_key=SECRET_KEY , algorithm= ALGORITHM)
     return {
         "access_token": new_access_token,
         "token_type": "bearer"
@@ -93,15 +95,19 @@ def handle_integrity_error(request:Request, exc:IntegrityError):
         status_code=400,
         content={"detail": "Integrity error: likely a duplicate entry or constraint violation"}
     )
-@app.get("/users", response_model= UserResponse)
-def get_user(session : Session = Depends(get_session), current_user: RegisterDetails = Depends(get_current_user)):
+@app.get("posts/{post_id}")
+def get_user(post_id:int, session : Session = Depends(get_session), current_user: RegisterDetails = Depends(get_current_user)):
     
     with session.begin():
-        user = session.get(User,1)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
         
-    return user
+        post = session.get(User_Post, post_id)
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+        
+        if not UserAuthPolicy.can_access_post_data(current_user, post):
+            raise HTTPException(status_code=403, detail="You do not have permission to access this post")
+    
+    return post
 
 @app.post("/users", response_model= UserResponse)
 def create_user(data:UserRequest, session:Session = Depends(get_session), current_user: RegisterDetails = Depends(get_current_user)):
@@ -127,3 +133,4 @@ def update_user(user_id:int , data:PartialUserUpdate, session:Session = Depends(
         session.flush()
         session.refresh(user)
     return user
+

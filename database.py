@@ -18,7 +18,7 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__="users"
     
-    id : Mapped[int] = mapped_column(primary_key=True)
+    id : Mapped[int] = mapped_column(ForeignKey("register_details.id"), primary_key = True)
     name : Mapped[str] 
     age : Mapped[int]
     role : Mapped[str] = mapped_column(default = "user")
@@ -38,6 +38,13 @@ class RegisterDetails(Base):
     __tablename__ = "register_details"
     
     id : Mapped[int] = mapped_column(primary_key = True)
-    user_id : Mapped[int] = mapped_column(ForeignKey("users.id"))
     password_hash : Mapped[str] 
     email : Mapped[str] = mapped_column( unique = True , nullable = False)
+    role : Mapped[str] = mapped_column(default = "user")
+    
+class User_Post(Base):
+    __tablename__ = "user_posts"
+    
+    post_id : Mapped[int] = mapped_column(primary_key = True)
+    owner_id : Mapped[int] = mapped_column(ForeignKey("users.id"))
+    content : Mapped[str]
