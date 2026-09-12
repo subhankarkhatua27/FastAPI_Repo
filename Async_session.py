@@ -7,7 +7,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL is None:
     raise RuntimeError(
-        "can't find the valid database url "
+        "can't find the valid database url"
     )
 
 

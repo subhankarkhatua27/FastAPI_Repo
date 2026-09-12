@@ -48,3 +48,11 @@ class User_Post(Base):
     post_id : Mapped[int] = mapped_column(primary_key = True)
     owner_id : Mapped[int] = mapped_column(ForeignKey("users.id"))
     content : Mapped[str]
+    
+class File_details(Base):
+    __tablename__= "file_details"
+    
+    file_id : Mapped[int]=mapped_column(primary_key= True)
+    original_name : Mapped[str]=mapped_column(nullable = False)
+    storage_name : Mapped[str]= mapped_column(nullable = False)
+    owner_id : Mapped[int] = mapped_column(ForeignKey(RegisterDetails.id))
