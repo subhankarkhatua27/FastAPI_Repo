@@ -56,3 +56,4 @@ class File_details(Base):
     original_name : Mapped[str]=mapped_column(nullable = False)
     storage_name : Mapped[str]= mapped_column(nullable = False)
     owner_id : Mapped[int] = mapped_column(ForeignKey(RegisterDetails.id))
+    status : Mapped[str] 
