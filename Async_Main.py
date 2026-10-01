@@ -3,6 +3,7 @@ from Async_session import get_session,async_engine
 from sqlalchemy.ext.asyncio import AsyncSession
 import asyncio
 from sqlalchemy import select
+from user_rate_limiter import user_rate_limiter
 from database import User,RegisterDetails,File_details
 from fastapi import UploadFile
 from uuid import uuid4
@@ -23,7 +24,7 @@ from Redis_client import get_redis
 load_dotenv()
 REDIS_URL= os.getenv("REDIS_URL")
 if REDIS_URL is None:
-    raise RuntimeError(" can't find SECRET_KEY in environment variables. Please set it in .env file")
+    raise RuntimeError(" can't find REDIS_URL in environment variables. Please set it in .env file")
 
 
 
@@ -32,16 +33,17 @@ if REDIS_URL is None:
 async def lifespan(app:FastAPI):
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    redis_client=  Redis.from_url("REDIS_URL",decode_responses=True)
+    redis_client=  Redis.from_url(REDIS_URL or "",decode_responses=True)
     app.state.redis = redis_client
     yield
     await redis_client.aclose()    
 
 app = FastAPI(lifespan=lifespan)
 
-@app.get("/users/{user_id}")
-async def get_user_data(session :AsyncSession = Depends(get_session),client=Depends(get_redis),current_user:RegisterDetails = Depends(get_current_user), user_id:int = 1):
+@app.get("/users/{user_id}", dependencies=[Depends(user_rate_limiter)])
+async def get_user_data(session :AsyncSession = Depends(get_session),client=Depends(get_redis),current_user:RegisterDetails = Depends(get_current_user)):
     
+    user_id = current_user.id
     user = await client.hgetall(f"user:{user_id}")
     if not user:
         async with session.begin():
@@ -95,29 +97,29 @@ async def upload_file(session:AsyncSession = Depends(get_session),client=Depends
                     
                 }
             )
-    
-    messages = await client.xreadgroup(
-        groupname = "file_uploaders",
-        consumername = "worker-1",
-        streams = {
-            "upload_file": ">"
-        }, 
-        count = 10,
-        block = 5000,
-    )
-    #await client.xreadgroup(
-       # groupname = "file_uploaders",
-        #consumeername = "worker-2",
-        #streams = {
-            #"upload_file": ">"
-        #}, 
-       # count = 10
-    #)
-    for stream_name, events in messages :
-        for message_id,data in events:
+    while True:
+        messages = await client.xreadgroup(
+            groupname = "file_uploaders",
+            consumername = "worker-1",
+            streams = {
+                "upload_file": ">"
+            }, 
+            count = 10,
+            block = 5000,
+        )
+        #await client.xreadgroup(
+        # groupname = "file_uploaders",
+            #consumeername = "worker-2",
+            #streams = {
+                #"upload_file": ">"
+            #}, 
+        # count = 10
+        #)
+        for stream_name, events in messages :
+            for message_id,data in events:
             
-            #await data["event"]()      # this will do the background task in background but it's wrongg as redis can't store a python function only string
-            with open(f"uploads/{secret_file_name}", "ab") as f:
+                #await data["event"]()      # this will do the background task in background but it's wrongg as redis can't store a python function only string
+                with open(f"uploads/{secret_file_name}", "ab") as f:
                         size = 0           
                         while True:
                             chunk = await file.read(1024*1024)
@@ -132,25 +134,25 @@ async def upload_file(session:AsyncSession = Depends(get_session),client=Depends
                                     detail="file size is bigger than 5 MB"
                                 )
                             f.write(chunk)
-            async with session.begin():
-                file_detail=await session.get(File_details, int(data["file_id"]),)
-                if file_detail is None:
-                    raise HTTPException(status_code=404, detail="File not found")
+                async with session.begin():
+                    file_detail=await session.get(File_details, int(data["file_id"]),)
+                    if file_detail is None:
+                        raise HTTPException(status_code=404, detail="File not found")
                 
-                file_detail.status = "processing"
+                    file_detail.status = "processing"
            
-            await client.xack(
+                await client.xack(
                     "upload_file",
                     "file_uploaders",
                     message_id
                 )
             
-            async with session.begin():
-                file_detail= await session.get(File_details, int(data["file_id"]),)
-                if file_detail is None:
-                    raise HTTPException(status_code=404, detail="File not found")
-                file_detail.status= "completed"
-    return file_detail
+                async with session.begin():
+                    file_detail= await session.get(File_details, int(data["file_id"]),)
+                    if file_detail is None:
+                        raise HTTPException(status_code=404, detail="File not found")
+                    file_detail.status= "completed"
+        return file_detail
     
            
             
