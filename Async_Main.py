@@ -65,6 +65,12 @@ async def get_user_data(session :AsyncSession = Depends(get_session),client=Depe
 
 @app.post("/uploads")
 async def upload_file(session:AsyncSession = Depends(get_session),client=Depends(get_redis), file : UploadFile = File(...)):
+    
+    idem_key = f"idempotency:{file.filename}"
+    if await client.get(idem_key):
+        raise HTTPException(
+            status_code=409, detail="File already uploaded"
+        )
     async with session.begin():
         filename = file.filename
         if not filename:
@@ -146,7 +152,9 @@ async def upload_file(session:AsyncSession = Depends(get_session),client=Depends
                     "file_uploaders",
                     message_id
                 )
-            
+                idem_key = f"idempotency:{data['file_id']}"
+                client.set(idem_key, "completed",NX= True, ex=60*60)  # set an expiration time of 1 hour for the idempotency key
+
                 async with session.begin():
                     file_detail= await session.get(File_details, int(data["file_id"]),)
                     if file_detail is None:
