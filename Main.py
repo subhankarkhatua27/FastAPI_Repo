@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from reg_login import generate_jwt_access_token, generate_jwt_refresh_token, hash_generator, verify_password 
 import os
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -31,6 +32,14 @@ if ALGORITHM is None :
     raise RuntimeError(" can't find ALGORITHM in environment variables. Please set it in .env file")
 
 app=FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins = ["http://127.0.0.1:8000"],   #provide the Frontend server URL in allow_origins list to enable CORS for that specific origin. You can also use ["*"] to allow all origins, but it's not recommended for production environments.
+    allow_credentials=True,                         #here i provided my swagger UI URL to allow the frontend to send cookies and authentication headers with requests. This is important for maintaining user sessions and authentication state.
+    allow_methods=["*"],                            #frontent need to send requests with "credentials:include" header to include cookies and authentication headers in the requests. This is necessary for maintaining user sessions and authentication state.
+    allow_headers=["*"],    
+)
 @app.post("/register", response_model=RegisterResponse)
 def register_user(data:RegisterRequest ,session:Session=Depends(get_session)):
     with session.begin():
